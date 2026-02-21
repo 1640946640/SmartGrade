@@ -1,0 +1,17 @@
+Flask==3.0.0
+opencv-python-headless==4.9.0.80
+paddleocr>=2.7.0
+paddlepaddle>=2.6.0
+langchain
+langchain-community
+langchain-openai
+python-dotenv
+dashscope
+numpy<2.0.0
+scikit-learn
+requests
+Pillow
+openai>=1.0.0
+anthropic>=0.18.0
+zhipuai>=2.0.0
+python-docx

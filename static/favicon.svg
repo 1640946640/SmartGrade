@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- Paper -->
+  <path d="M14 4 H42 L54 16 V60 H14 Z" fill="#fff" stroke="#0d6efd" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M42 4 V16 H54" fill="#fff" stroke="#0d6efd" stroke-width="4" stroke-linejoin="round"/>
+  <!-- Checkmark -->
+  <path d="M20 34 L30 44 L48 22" fill="none" stroke="#198754" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

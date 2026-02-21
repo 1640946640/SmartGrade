@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>批改结果（多模型）</title>
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/viewerjs@1.11.6/dist/viewer.min.css" rel="stylesheet">
+    <style>
+        .model-badge {
+            font-size: 0.8rem;
+            padding: 0.2rem 0.5rem;
+            margin: 0.1rem;
+        }
+        .score-display {
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+        .model-table th {
+            background-color: #f8f9fa;
+            border-bottom: 2px solid #dee2e6;
+        }
+        /* 图片查看器样式 */
+        .img-clickable {
+            cursor: zoom-in;
+            transition: transform 0.2s;
+        }
+        .img-clickable:hover {
+            transform: scale(1.02);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body class="bg-light">
+
+<div class="container mt-5">
+    <a href="/" class="btn btn-outline-secondary mb-3">&larr; 返回首页</a>
+    
+    <!-- 总分概览 -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <h4 class="mb-4">批改概览</h4>
+            <div class="row">
+                <div class="col-md-4 text-center">
+                    <div class="card bg-primary text-white">
+                        <div class="card-body">
+                            <h5 class="card-title">总分</h5>
+                            <h2 class="card-text score-display">{{ grading.total_score }} / {{ grading.max_total_score }}</h2>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 text-center">
+                    <div class="card bg-success text-white">
+                        <div class="card-body">
+                            <h5 class="card-title">正确率</h5>
+                            <h2 class="card-text score-display">{{ "%.1f"|format(grading.accuracy * 100) }}%</h2>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 text-center">
+                    <div class="card bg-info text-white">
+                        <div class="card-body">
+                            <h5 class="card-title">正确题数</h5>
+                            <h2 class="card-text score-display">{{ grading.correct_count }} / {{ grading.total_count }}</h2>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 各模型得分统计 -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <h4 class="mb-4">各模型得分统计</h4>
+            <table class="table table-hover">
+                <thead class="table-dark">
+                    <tr>
+                        <th>模型</th>
+                        <th>总得分</th>
+                        <th>占比</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if grading.model_results %}
+                    {% for model_name, model_total in grading.model_results.items() %}
+                    <tr>
+                        <td>
+                            {% if model_name == 'qwen-vl-max' %}
+                                <span class="badge bg-primary">Qwen-VL-Max</span>
+                            {% else %}
+                                <span class="badge bg-secondary">{{ model_name }}</span>
+                            {% endif %}
+                        </td>
+                        <td><strong>{{ model_total }}</strong></td>
+                        <td>
+                            {% if grading.total_score > 0 %}
+                                {{ "%.1f"|format(model_total / grading.total_score * 100) }}%
+                            {% else %}
+                                0.0%
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <div class="row">
+        <!-- 图片展示 -->
+        <div class="col-md-4">
+            <div class="card p-3">
+                <h4>原始图片</h4>
+                <div id="image-gallery">
+                    <img id="exam-image" src="{{ image_url }}" class="img-fluid rounded border img-clickable" style="max-height: 400px;" alt="试卷图片">
+                </div>
+                <div class="text-muted small mt-2 text-center">
+                    <i class="bi bi-zoom-in"></i> 点击图片可放大查看
+                </div>
+            </div>
+        </div>
+        
+        <!-- 详细批改结果 -->
+        <div class="col-md-8">
+            <div class="card p-4 shadow-sm">
+                <h4 class="mb-4">详细批改结果</h4>
+                
+                <div class="table-container" style="max-height: 600px; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 0.25rem;">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-dark" style="position: sticky; top: 0; z-index: 1;">
+                            <tr>
+                                <th>题号</th>
+                                <th>各模型评分</th>
+                                <th>最终得分</th>
+                                <th>满分</th>
+                                <th>是否正确</th>
+                                <th>评语/解析</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        {% for q_id, item in grading.details.items() %}
+                        <tr class="{{ 'table-success' if item.is_correct else 'table-danger' }}">
+                            <td>
+                                {% if item.group_name %}
+                                    <div class="text-muted" style="font-size: 0.8rem;">{{ item.group_name }}</div>
+                                    <div style="font-size: 1.2rem;"><strong>{{ item.sub_id }}</strong></div>
+                                {% else %}
+                                    <strong>{{ item.question_id }}</strong>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="model-scores">
+                                    {% if item.model_scores %}
+                                        {% for model_name, model_result in item.model_scores.items() %}
+                                            <div class="model-badge badge bg-light text-dark">
+                                                {{ model_name }}: {{ model_result.score }}/{{ item.max_score }}
+                                            </div>
+                                        {% endfor %}
+                                    {% else %}
+                                        <span class="text-muted">无模型评分</span>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td><strong>{{ item.score }}</strong></td>
+                            <td>{{ item.max_score }}</td>
+                            <td>
+                                {% if item.is_correct %}
+                                    <span class="badge bg-success">✓ 正确</span>
+                                {% else %}
+                                    <span class="badge bg-danger">✗ 错误</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div>{{ item.comment }}</div>
+                                {% if item.analysis %}
+                                    <div class="mt-2 p-2 bg-light rounded border border-secondary text-dark" style="font-size: 0.9rem;">
+                                        <strong>解析：</strong> {{ item.analysis }}
+                                    </div>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 批改报告下载 -->
+    <div class="card p-3">
+        <div class="card-body">
+            <h5 class="mb-3">下载详细报告</h5>
+            <p class="text-muted">您可以下载包含详细解析的 Word 报告，或原始 JSON 数据。</p>
+            <a href="{{ url_for('main.download_word_report', filename=original_filename) }}" class="btn btn-primary me-3">
+                <i class="bi bi-file-earmark-word"></i> 下载 Word 报告 (推荐)
+            </a>
+            <a href="{{ report_url }}" class="btn btn-outline-secondary" download>
+                <i class="bi bi-file-earmark-code"></i> 下载 JSON 数据
+            </a>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/viewerjs@1.11.6/dist/viewer.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // 初始化 Viewer.js
+        const gallery = document.getElementById('image-gallery');
+        const image = document.getElementById('exam-image');
+        
+        if (gallery && image) {
+            new Viewer(gallery, {
+                url: 'src',
+                toolbar: {
+                    zoomIn: 1,
+                    zoomOut: 1,
+                    oneToOne: 1,
+                    reset: 1,
+                    prev: 0,
+                    play: {
+                        show: 0,
+                        size: 'large',
+                    },
+                    next: 0,
+                    rotateLeft: 1,
+                    rotateRight: 1,
+                    flipHorizontal: 1,
+                    flipVertical: 1,
+                },
+                title: false,
+                navbar: false,
+                tooltip: true,
+                movable: true,
+                zoomable: true,
+                rotatable: true,
+                scalable: true
+            });
+        }
+    });
+</script>
+
+</body>
+</html>

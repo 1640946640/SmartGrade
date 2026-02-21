@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>试卷分析结果</title>
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+
+<div class="container mt-5">
+    <a href="/" class="btn btn-outline-secondary mb-3">&larr; 返回首页</a>
+    
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <h2 class="mb-4">试卷分析结果</h2>
+            
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <div class="card bg-primary text-white">
+                        <div class="card-body">
+                            <h5 class="card-title">识别题目数</h5>
+                            <h2 class="card-text">{{ analysis.questions|length }}</h2>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card bg-info text-white">
+                        <div class="card-body">
+                            <h5 class="card-title">使用模型</h5>
+                            <h4 class="card-text">{{ analysis.model_used or 'qwen-vl-max' }}</h4>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mb-4">
+                <h4>原始图片</h4>
+                <img src="{{ image_url }}" class="img-fluid rounded border" style="max-height: 500px;">
+            </div>
+            
+            <h4 class="mt-4">题目列表</h4>
+            <table class="table table-hover">
+                <thead class="table-dark">
+                    <tr>
+                        <th>题号</th>
+                        <th>题型</th>
+                        <th>学生答案</th>
+                        <th>置信度</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for question in analysis.questions %}
+                    <tr>
+                        <td><strong>{{ question.question_number }}</strong></td>
+                        <td>
+                            {% if question.question_type == 'choice' %}
+                                <span class="badge bg-primary">选择题</span>
+                            {% elif question.question_type == 'fill_blank' %}
+                                <span class="badge bg-info">填空题</span>
+                            {% elif question.question_type == 'subjective' %}
+                                <span class="badge bg-warning">主观题</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ question.student_answer or '无法识别' }}</td>
+                        <td>
+                            {% if question.confidence >= 0.8 %}
+                                <span class="badge bg-success">高 ({{ "%.1f"|format(question.confidence * 100) }}%)</span>
+                            {% elif question.confidence >= 0.5 %}
+                                <span class="badge bg-warning">中 ({{ "%.1f"|format(question.confidence * 100) }}%)</span>
+                            {% else %}
+                                <span class="badge bg-danger">低 ({{ "%.1f"|format(question.confidence * 100) }}%)</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>
