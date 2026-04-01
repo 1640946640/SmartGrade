@@ -1,0 +1,33 @@
+[Unit]
+Description=SmartGrade AI Intelligent Grading Service
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/path/to/SmartGrade
+Environment=PATH=/path/to/SmartGrade/smartgrade-env/bin
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/path/to/SmartGrade/smartgrade-env/bin/gunicorn -w 2 -b 127.0.0.1:8000 --timeout 300 --preload "app:create_app()"
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=smartgrade
+
+[Install]
+WantedBy=multi-user.target
+
+# 配置说明：
+# 1. 将 /path/to/SmartGrade 替换为你的实际项目路径
+# 2. 确保 www-data 用户对项目目录有读写权限
+# 3. 如果使用其他用户，请相应修改 User 和 Group
+# 4. 如需调整工作进程数，修改 -w 参数
+# 5. 如需更改绑定地址和端口，修改 -b 参数
+#
+# 安装步骤：
+# 1. sudo cp smartgrade.service /etc/systemd/system/
+# 2. sudo systemctl daemon-reload  
+# 3. sudo systemctl enable smartgrade
+# 4. sudo systemctl start smartgrade
